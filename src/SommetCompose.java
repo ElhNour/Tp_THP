@@ -28,4 +28,9 @@ public class SommetCompose extends Sommet implements Comparable<SommetCompose>{
         }
             return number;
     }
+
+    @Override
+    public int hashCode() {
+        return this.getid().hashCode();
+    }
 }

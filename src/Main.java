@@ -4,10 +4,11 @@ import java.util.Scanner;
 public class Main {
     public static void main(String[] args) {
         System.out.println("Veuillez entrer votre Automate");
-        System.out.println("");
         AutomateSimple A =AutomateSimple.CreerAutomateSimple();
         A.afficheAutomate();
-        System.out.println("Choisir ce que vous voulez faire sur votre automate:");
+        int r=1;
+        while (r!=0) {
+        System.out.println("\nChoisir ce que vous voulez faire sur votre automate:");
         System.out.println(" 1.Réduire l'automate");
         System.out.println(" 2.Faire le complement");
         System.out.println(" 3.Faire le miroir");
@@ -45,6 +46,11 @@ public class Main {
                 ADet.afficheAutomate();
                 break;
 
+        }
+            System.out.println("Que voulez vous faire:");
+            System.out.println("0.sortir");
+            System.out.println("1.une autre operation sur l'automate");
+            r=sc.nextInt();
         }
 
     }

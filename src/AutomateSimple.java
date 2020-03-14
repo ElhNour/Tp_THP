@@ -203,19 +203,7 @@ public class AutomateSimple {
 
          for (int i=0;i<this.getFinaux().size();i++) System.out.print(this.getFinaux().get(i).getid()+", ");
          for (Transition tr:this.getTransitions()) {System.out.println("\n");
-             if (tr.getSrc().getClass().equals(SommetCompose.class)) {
-                 System.out.print("{");
-                 SommetCompose sc=(SommetCompose) tr.getSrc();
-                 for (Sommet s:sc.getSommetsComposes()) System.out.print(s.getid()+", ");}else System.out.print(tr.getSrc().getid());
-
-                 System.out.print(" -> ["+tr.getTrans()+"] -> ");
-
-             if (tr.getDest().getClass().equals(SommetCompose.class)) {
-                 SommetCompose sc=(SommetCompose) tr.getDest();
-                 for (Sommet s:sc.getSommetsComposes()) System.out.print(s.getid()+", ");
-                 System.out.print("}");}
-             else System.out.print(tr.getDest().getid());
-
+                 System.out.print("{"+tr.getSrc().getid()+"} -> ["+tr.getTrans()+"] -> {"+tr.getDest().getid()+"}");
              }}
     public AutomateSimple Reduire(){
         ArrayList<Sommet> accessible = new ArrayList<Sommet>();
@@ -390,143 +378,150 @@ public class AutomateSimple {
         return AComplement;
     }
 
-     public AutomateDeterministe deterministe(){
-        AutomateDeterministe deterministe=new AutomateDeterministe();
-        ArrayList<Sommet> sommets =new ArrayList<Sommet>();
-        ArrayList<Transition> transitions=new ArrayList<Transition>();
-        ArrayList<Sommet> finaux=new ArrayList<Sommet>();
-        sommets.add(this.getS0());
-        int i=0;
-       //try {
-            while (i<sommets.size()){
-                System.out.println("\nBoucle principale\n");
-                Sommet si=sommets.get(i);
-                ArrayList<String> strings=new ArrayList<>();
-                if (si.getClass().equals(SommetCompose.class)){//sommet Compose
-                    System.out.println("je suis un sommet compose");
-                    SommetCompose sc=(SommetCompose) si;
-                    for (Sommet s:sc.getSommetsComposes()) {
-                        for (Transition trans:s.getTrans_sortantes())
-                            if (!strings.contains(trans.getTrans()))strings.add(trans.getTrans());
-                    }
-                    for (String letter : this.getAlphabet()) {
-                        if (strings.contains(letter)) {
-                            SommetCompose scmp = new SommetCompose();
+     public AutomateDeterministe deterministe() {
+         AutomateDeterministe deterministe = new AutomateDeterministe();
+         ArrayList<Sommet> sommets = new ArrayList<Sommet>();
+         ArrayList<Transition> transitions = new ArrayList<Transition>();
+         ArrayList<Sommet> finaux = new ArrayList<Sommet>();
+         sommets.add(this.getS0());
+         int i = 0;
+         try {
+         while (i < sommets.size()) {
+             Sommet si = sommets.get(i);
+             ArrayList<String> strings = new ArrayList<>();
+             if (si.getClass().equals(SommetCompose.class)) {//sommet Compose
+                 SommetCompose sc = (SommetCompose) si;
+                 String ss = "";
+                 String sss = "";
+                 for (Sommet s : sc.getSommetsComposes()) {
+                     ss += s.getid();
+                     for (Transition trans : s.getTrans_sortantes()) {
+                         if (!strings.contains(trans.getTrans())) strings.add(trans.getTrans());
+                     }
+                 }
+                 sc.setId(ss);
+                 for (String letter : this.getAlphabet()) {
+                     if (strings.contains(letter)) {
+                         SommetCompose scmp = new SommetCompose();
 
-                            for (Sommet sommet : sc.getSommetsComposes()) {
-                                ArrayList<Sommet> destination = new ArrayList<>();
-                                int nb_occ=this.nb_occurrence(letter, sommet);
-                                destination=this.nb_occurrences(letter,sommet);
-                                System.out.println(destination.toString());
-                                if (nb_occ > 1) {
-                                    System.out.println("je suis un sommet compose cree doka");
-
-                                    scmp.setSommetsComposes(destination);
-                                    scmp.setId("S"+i+3);
-                                    int k = 0;
-                                    boolean stop = false;
-                                    while (k < this.getFinaux().size() && k < destination.size() && !stop) {
-                                        if (scmp.getSommetsComposes().contains(this.getFinaux().get(k))) {
-                                            stop = true;
-                                            scmp.setEtat(EEtat.FINAL);
-                                            finaux.add(scmp);
-                                            System.out.println("\n"+finaux.get(0).getid()+" FINAAAL");
-                                            deterministe.setFinaux(finaux);
-
-                                        }
-                                        k++;
-                                    }
-                                    if (!stop) scmp.setEtat(EEtat.SIMPLE);
-                                    if (scmp.getSommetsComposes().size()==0) scmp.setSommetsComposes(destination);
-                                    //
-                                    scmp.getSommetsComposes().addAll(destination);
+                         for (Sommet sommet : sc.getSommetsComposes()) {
+                             ArrayList<Sommet> destination = this.nb_occurrences(letter, sommet);
+                             int nb_occ = this.nb_occurrence(letter, sommet);
+                             if (nb_occ > 1) {
+                                 scmp.setSommetsComposes(destination);
+                                 for (Sommet som : destination) sss += som.getid();
+                                 scmp.setId(sss);
+                                 int k = 0;
+                                 boolean stop = false;
+                                 while (k < this.getFinaux().size() && k < destination.size() && !stop) {
+                                     if (scmp.getSommetsComposes().contains(this.getFinaux().get(k))) {
+                                         stop = true;
+                                         scmp.setEtat(EEtat.FINAL);
+                                         finaux.add(scmp);
+                                         deterministe.setFinaux(finaux);
+                                     }
+                                     k++;
+                                 }
+                                 if (!stop) scmp.setEtat(EEtat.SIMPLE);
+                                 if (scmp.getSommetsComposes().size() == 0) scmp.setSommetsComposes(destination);
+                                     //
+                                 else scmp.getSommetsComposes().addAll(destination);
 
 
-                                } else {
-                                    if (nb_occ!=0){
-                                        //
-                                        scmp.setSommetsComposes(destination);
-                                        int m=0;
-                                        while (m<this.getFinaux().size() && !this.getFinaux().get(m).equals(destination)) m++;
-                                        if (m<this.getFinaux().size() && this.getFinaux().get(m).equals(destination)){
-                                            scmp.setEtat(EEtat.FINAL);
-                                            deterministe.getFinaux().add(scmp);
-                                        }
+                             } else {
+                                 if (nb_occ != 0) {
+                                     //
+                                     if (scmp.getSommetsComposes().size()==0)scmp.setSommetsComposes(destination);
+                                     else scmp.getSommetsComposes().addAll(destination);
+                                     for (Sommet som : destination) sss += som.getid();
+                                     scmp.setId(sss);
+                                     int m = 0;
+                                     while (m < this.getFinaux().size() && !this.getFinaux().contains(destination)) m++;
+                                     if (m < this.getFinaux().size() && this.getFinaux().contains(destination)) {
+                                         scmp.setEtat(EEtat.FINAL);
+                                         finaux.add(scmp);
+                                         deterministe.setFinaux(finaux);
+                                     }
 
-                                    }
-                                }
-                            }
-                            if (!sommets.contains(scmp))sommets.add(scmp);
-                            deterministe.setEtats(sommets);
-                            Transition transition = new Transition(si, scmp, letter, false);
-                            transitions.add(transition);
-                            deterministe.setTransitions(transitions);
-                        }
-                    }
-                }else { //Sommet simple
-                    for (Transition tr:si.getTrans_sortantes()) {if (!strings.contains(tr.getTrans())) strings.add(tr.getTrans());}
-                    for (String letter : this.getAlphabet()){
-                        System.out.println("je suis a la lettre "+letter+"\n");
-                        if (strings.contains(letter)){
+                                 }
+                             }
+                         }
+                         //
+                         int a = 0;
+                         while (a < sommets.size() && !scmp.equals(sommets.get(a))) a++;
+                         if (a >= sommets.size()) sommets.add(scmp);
+                         //
+                         deterministe.setEtats(sommets);
+                         Transition transition = new Transition(si, scmp, letter, false);
+                         transitions.add(transition);
+                         deterministe.setTransitions(transitions);
+                     }
+                 }
+             } else { //Sommet simple
+                 for (Transition tr : si.getTrans_sortantes()) {
+                     if (!strings.contains(tr.getTrans())) strings.add(tr.getTrans());
+                 }
+                 for (String letter : this.getAlphabet()) {
+                     if (strings.contains(letter)) {
+                         ArrayList<Sommet> destination = this.nb_occurrences(letter, si);
+                         int nb_occ = this.nb_occurrence(letter, si);
+                         if (nb_occ > 1) {
+                             String sss = "";
+                             SommetCompose sommetCompos = new SommetCompose();
+                             sommetCompos.setSommetsComposes(destination);
+                             for (Sommet som : destination) sss += som.getid();
+                             sommetCompos.setId(sss);
+                             int a = 0;
+                             while (a < sommets.size() && !sommetCompos.equals(sommets.get(a))) a++;
+                             if (a >= sommets.size()) {
+                                 int k = 0;
+                                 boolean stop = false;
+                                 while (k < destination.size() && !stop) {
+                                     if ((sommetCompos.getSommetsComposes().contains(this.getFinaux().get(k))) || (sommetCompos.getSommetsComposes().get(k).equals(this.getFinaux().get(0)))) {
+                                         stop = true;
+                                         sommetCompos.setEtat(EEtat.FINAL);
+                                         finaux.add(sommetCompos);
+                                         deterministe.setFinaux(finaux);
+                                     }
+                                     k++;
+                                 }
+                                 if (!stop) sommetCompos.setEtat(EEtat.SIMPLE);
+                                 sommets.add(sommetCompos);
+                                 deterministe.setEtats(sommets);
+                                 Transition transition = new Transition(si, sommetCompos, letter, false);
+                                 transitions.add(transition);
+                                 deterministe.setTransitions(transitions);
 
-                            System.out.println("Oui y a a");
-                            ArrayList<Sommet> destination=new ArrayList<Sommet>();
-                            int nb_occ=this.nb_occurrence(letter,si);
-                            destination=this.nb_occurrences(letter,si);
-                            if (nb_occ>1) {
-                                System.out.println("je suis un sommet compose cree");
+                             }
+                         } else {
+                             if (nb_occ != 0) {
+                                 if (!sommets.contains(si)) sommets.add(si);//pour ne pas doubler le mm sommet
+                                 if (!si.getTransitionByLetter(letter).getBoucle() && !sommets.contains(si.getTransitionByLetter(letter).getDest())) {
+                                     Sommet so = si.getTransitionByLetter(letter).getDest();
+                                     sommets.add(so);
+                                     int n = 0;
+                                     while (n < this.getFinaux().size() && !this.getFinaux().get(n).equals(so)) n++;
+                                     if (n < this.getFinaux().size() && this.getFinaux().get(n).equals(so)) {
+                                         so.setEtat(EEtat.FINAL);
+                                         if (deterministe.nbFinaux() != 0) deterministe.getFinaux().add(so);
+                                     }
+                                 }
+                                 deterministe.setEtats(sommets);
+                                 transitions.add(si.getTransitionByLetter(letter));
+                                 deterministe.setTransitions(transitions);
+                             }
+                         }
 
-                                SommetCompose sommetCompos=new SommetCompose();
-                                sommetCompos.setSommetsComposes(destination);
-                                System.out.println(destination.toString());
-                                if (!sommets.contains(sommetCompos)){
-                                    int k=0; boolean stop=false;
-                                    while (k<destination.size()&& !stop){
-                                        if ((sommetCompos.getSommetsComposes().contains(this.getFinaux().get(k))) || (sommetCompos.getSommetsComposes().get(k).equals(this.getFinaux().get(0)))){stop=true;
-                                            sommetCompos.setEtat(EEtat.FINAL);
-                                            sommetCompos.setId("S"+i+2);
-                                            finaux.add(sommetCompos);
-                                            System.out.println("\n"+finaux.get(0).getid()+" FINAAAL");
-                                            deterministe.setFinaux(finaux);
-                                        }
-                                        k++;
-                                    }
-                                    if (!stop) sommetCompos.setEtat(EEtat.SIMPLE);
-                                    sommets.add(sommetCompos);
-                                    deterministe.getEtats().addAll(sommets);
-                                    Transition transition=new Transition(si,sommetCompos,letter,false);
-                                    transitions.add(transition);
-                                    deterministe.getTransitions().addAll(transitions);
-
-                                }}else{
-                                if (nb_occ!=0) {
-                                    if (!sommets.contains(si)) sommets.add(si);//pour ne pas doubler le mm sommet
-                                    if (!si.getTransitionByLetter(letter).getBoucle() && !sommets.contains(si.getTransitionByLetter(letter).getDest())) {
-                                        Sommet so = si.getTransitionByLetter(letter).getDest();
-                                        sommets.add(so);
-                                        int n = 0;
-                                        while (n < this.getFinaux().size() && !this.getFinaux().get(n).equals(so)) n++;
-                                        if (this.getFinaux().get(n).equals(so)) {
-                                            so.setEtat(EEtat.FINAL);
-                                            if (deterministe.nbFinaux()!=0) deterministe.getFinaux().add(so);
-                                        }
-                                    }
-
-                                    deterministe.setEtats(sommets);
-                                    transitions.add(si.getTransitionByLetter(letter));
-                                    deterministe.setTransitions(transitions);
-                                }
-                                }
-
-                            }
-                        }}
-                i++;
-                }
-       /*}
+                     }
+                 }
+             }
+             i++;
+         }
+     }
 
         catch (NullPointerException e){
             System.out.println("une chose n'a pas ete initialisee,veuillez verifier...");
-        }*/
+        }
         deterministe.setAlphabet(this.alphabet);
         deterministe.setS0(this.S0);
         return deterministe;
