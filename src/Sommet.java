@@ -50,4 +50,14 @@ public class Sommet {
     public void setEtat(EEtat etat) {
         this.etat = etat;
     }
+    public Transition getTransitionByLetter(String letter){
+        int i=0;
+        while (!this.getTrans_sortantes().get(i).getTrans().equals(letter)) i++;
+        return this.getTrans_sortantes().get(i);
+    }
+
+
+    public boolean equals(Sommet obj) {
+        return this.getid().equals(obj.getid());
+    }
 }

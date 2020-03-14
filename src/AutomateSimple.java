@@ -13,6 +13,14 @@ public class AutomateSimple {
         return alphabet;
     }
 
+    public void setFinaux(ArrayList<Sommet> finaux) {
+        this.finaux = finaux;
+    }
+
+    public void setTransitions(ArrayList<Transition> transitions) {
+        this.transitions = transitions;
+    }
+
     public void setAlphabet(ArrayList<String> alphabet) {
         this.alphabet = alphabet;
     }
@@ -34,6 +42,10 @@ public class AutomateSimple {
 
     public void setS0(Sommet s0) {
         S0 = s0;
+    }
+
+    public void setEtats(ArrayList<Sommet> etats) {
+        this.etats = etats;
     }
 
     public Sommet getSommetById(String id){
@@ -151,20 +163,151 @@ public class AutomateSimple {
         }
         return automate;
      }
-     public void afficheAutomateSimple(){
-         System.out.println("Ensemble de l'alphabet :"+this.getAlphabet().toString());
+     public int nb_occurrence(String letter,Sommet s,ArrayList<Sommet> destinations){
+        int nb_occ=0;
+        for (Transition tr :s.getTrans_sortantes()){
+            if (tr.getTrans().equals(letter)){
+                nb_occ++;
+                destinations.add(tr.getDest());
+            }
+        }
+        return nb_occ;
+     }
+
+     public void afficheAutomate(){
+         System.out.println("\nEnsemble de l'alphabet :"+this.getAlphabet().toString());
          System.out.println("Etat initial :"+this.getS0().getid());
          System.out.print("Etats finaux : ");
 
          for (int i=0;i<this.getFinaux().size();i++) System.out.print(this.getFinaux().get(i).getid()+", ");
-         for (Transition tr:this.getTransitions()) System.out.println("\n"+tr.getSrc().getid()+" -> ["+tr.getTrans()+"] -> "+tr.getDest().getid());
+         for (Transition tr:this.getTransitions()) {System.out.println("\n");
+             if (tr.getSrc().getClass().equals(SommetCompose.class)) {
+                 System.out.print("{");
+                 SommetCompose sc=(SommetCompose) tr.getSrc();
+                 for (Sommet s:sc.getSommetsComposes()) System.out.print(s.getid()+", ");}else System.out.print(tr.getSrc().getid());
+
+                 System.out.print(" -> ["+tr.getTrans()+"] -> ");
+
+             if (tr.getDest().getClass().equals(SommetCompose.class)) {
+                 SommetCompose sc=(SommetCompose) tr.getDest();
+                 for (Sommet s:sc.getSommetsComposes()) System.out.print(s.getid()+", ");
+                 System.out.print("}");}
+             else System.out.print(tr.getDest().getid());
+
+             }}
+
+
+     public AutomateDeterministe deterministe(){
+        AutomateDeterministe deterministe=new AutomateDeterministe();
+        ArrayList<Sommet> sommets =new ArrayList<Sommet>();
+        ArrayList<Transition> transitions=new ArrayList<Transition>();
+        ArrayList<Sommet> finaux=new ArrayList<Sommet>();
+        sommets.add(this.getS0());
+        int i=0;
+        try {
+            while (i<sommets.size()){
+                Sommet si=sommets.get(i);
+                ArrayList<String> strings=new ArrayList<>();
+                if (si.getClass().equals(SommetCompose.class)){ //sommet Compose
+                    SommetCompose sc=(SommetCompose) si;
+                    for (Sommet s:sc.getSommetsComposes()) {
+                        for (Transition trans:s.getTrans_sortantes())
+                            if (!strings.contains(trans.getTrans()))strings.add(trans.getTrans());
+                    }
+                    for (String letter : this.getAlphabet()) {
+                        if (strings.contains(letter)) {
+                            SommetCompose scmp = new SommetCompose();
+
+                            for (Sommet sommet : sc.getSommetsComposes()) {
+                                ArrayList<Sommet> destination = new ArrayList<Sommet>();
+                                int nb_occ=this.nb_occurrence(letter, sommet, destination);
+                                if (nb_occ > 1) {
+                                    scmp.setSommetsComposes(destination);
+                                    int k = 0;
+                                    boolean stop = false;
+                                    while (k < this.getFinaux().size() && k < destination.size() && !stop) {
+                                        if (scmp.getSommetsComposes().contains(this.getFinaux().get(k))) {
+                                            stop = true;
+                                            scmp.setEtat(EEtat.FINAL);
+                                            finaux.add(scmp);
+                                            deterministe.setFinaux(finaux);
+                                            System.out.println("\n"+this.getFinaux().get(k));
+                                        }
+                                        k++;
+                                    }
+                                    if (!stop) scmp.setEtat(EEtat.SIMPLE);
+                                    if (scmp.getSommetsComposes().size()==0) scmp.setSommetsComposes(destination);
+                                    else if (!scmp.getSommetsComposes().contains(destination))scmp.getSommetsComposes().addAll(destination);
+
+
+                                } else {
+                                    if (nb_occ!=0){
+                                        if (scmp.getSommetsComposes().size()==0) scmp.setSommetsComposes(destination);
+                                        else if (!scmp.getSommetsComposes().contains(destination))scmp.getSommetsComposes().addAll(destination);}
+                                }
+                            }
+                            if (!sommets.contains(scmp))sommets.add(scmp);
+                            deterministe.setEtats(sommets);
+                            Transition transition = new Transition(si, scmp, letter, false);
+                            transitions.add(transition);
+                            deterministe.setTransitions(transitions);
+                        }
+                    }
+                }else { //Sommet simple
+                    for (Transition tr:si.getTrans_sortantes()) if (!strings.contains(tr.getTrans()))strings.add(tr.getTrans());
+                    for (String letter : this.getAlphabet()){
+                        if (strings.contains(letter)) {
+                            ArrayList<Sommet> destination=new ArrayList<Sommet>();
+                            int nb_occ=this.nb_occurrence(letter,si,destination);
+                            if (nb_occ>1) {
+                                SommetCompose sommetCompos=new SommetCompose();
+                                sommetCompos.setSommetsComposes(destination);
+                                if (!sommets.contains(sommetCompos)){
+                                    int j=0; boolean stop=false;
+                                    while (j<destination.size()&& !stop){
+                                        if ((sommetCompos.getSommetsComposes().contains(this.getFinaux().get(j))) || (sommetCompos.getSommetsComposes().get(j).equals(this.getFinaux().get(0)))){stop=true;
+                                            sommetCompos.setEtat(EEtat.FINAL);
+                                            finaux.add(sommetCompos);
+                                            deterministe.setFinaux(finaux);
+                                        }
+                                        j++;
+                                    }
+                                    if (!stop) sommetCompos.setEtat(EEtat.SIMPLE);
+                                    sommets.add(sommetCompos);
+                                    Transition transition=new Transition(si,sommetCompos,letter,false);
+                                    transitions.add(transition);
+                                    deterministe.setTransitions(transitions);
+
+                                }}else{
+                                if (nb_occ!=0){
+                                    if (!sommets.contains(si))sommets.add(si);//pour ne pas doubler le mm sommet
+                                    if (!si.getTransitionByLetter(letter).getBoucle()&& !sommets.contains(si.getTransitionByLetter(letter).getDest()))sommets.add(si.getTransitionByLetter(letter).getDest());
+                                    deterministe.setEtats(sommets);
+                                    transitions.add(si.getTransitionByLetter(letter));
+                                    deterministe.setTransitions(transitions);
+                                }
+
+                            }
+                        }}
+                }
+                i++;
+            }
+        }
+        catch (NullPointerException e){
+            System.out.println("une chose n'a pas ete initialisee,veuillez verifier...");
+        }
+        deterministe.setAlphabet(this.alphabet);
+        deterministe.setS0(this.S0);
+        return deterministe;
 
      }
 
     public static void main(String[] args) {
         System.out.println("/*------ Creation d'un automate simple ------*/");
         AutomateSimple automateSimple= AutomateSimple.CreerAutomateSimple();
-        automateSimple.afficheAutomateSimple();
+        automateSimple.afficheAutomate();
+        AutomateDeterministe autoD=automateSimple.deterministe();
+        autoD.afficheAutomate();
     }
 }
 
