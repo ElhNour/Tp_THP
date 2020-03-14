@@ -9,6 +9,16 @@ public class AutomateSimple {
     private ArrayList<Sommet> finaux;
     private ArrayList<Transition> transitions;
 
+    public AutomateSimple(){}
+
+    public AutomateSimple(Sommet init)
+    {
+        this.S0=init;
+        this.alphabet= new ArrayList<String>();
+        this.etats= new ArrayList<Sommet>();
+        this.finaux= new ArrayList<Sommet>();
+        this.transitions= new ArrayList<Transition>();
+    }
     public ArrayList<String> getAlphabet() {
         return alphabet;
     }
@@ -56,27 +66,29 @@ public class AutomateSimple {
         if (i<this.getEtats().size())return this.getEtats().get(i);
         else return null;
     }
-    public AutomateSimple mirroir (AutomateSimple automate){
-        Sommet S0=automate.getS0();
+    public AutomateSimple mirroir (){
+        Sommet S0=this.getS0();
         S0.setEtat(EEtat.FINAL);
-        ArrayList <Sommet> sommets=automate.getFinaux();
+        ArrayList <Sommet> sommets=this.getFinaux();
         for (Sommet s: sommets) {
-            s.setEtat(EEtat.INITIAL);
+            s.setEtat(EEtat.SIMPLE);
         }
+        this.getFinaux().clear();
+        this.getFinaux().add(S0);
         /*rajouter un etat initial*/
         Sommet initial=new Sommet("newS0",EEtat.INITIAL);
         for (Sommet s:sommets) {
             Transition transition=new Transition(initial,s,"&",false);
             initial.getTrans_sortantes().add(transition);
         }
-        automate.setS0(initial);
-        ArrayList<Transition> transitions = automate.getTransitions();
+        this.setS0(initial);
+        ArrayList<Transition> transitions = this.getTransitions();
         for (Transition t : transitions){
             Sommet tmp = t.getSrc();
             t.setSrc(t.getDest());
             t.setDest(tmp);
         }
-        return automate;
+        return this;
     }
     public boolean reconnaissance_mot(String mot){
         int i=0; boolean stop=false; Sommet Si=new Sommet();boolean result =false;
@@ -205,7 +217,178 @@ public class AutomateSimple {
              else System.out.print(tr.getDest().getid());
 
              }}
+    public AutomateSimple Reduire(){
+        ArrayList<Sommet> accessible = new ArrayList<Sommet>();
+        ArrayList<Sommet> coaccessible = new ArrayList<Sommet>();
+        ArrayList<Transition> trans = new ArrayList<Transition>();
+        ArrayList<Transition> sortants = new ArrayList<Transition>();
+        ArrayList<Transition> entrants = new ArrayList<Transition>();
+        AutomateSimple AReduit = new AutomateSimple(this.S0);
+        AReduit.setAlphabet(alphabet);
+        AReduit.setEtats(etats);
+        AReduit.setFinaux(finaux);
+        AReduit.setTransitions(transitions);
+        Sommet s0= this.S0;
+        int tete=0;
+        int cpt=0;
+        Sommet s=s0;
+        accessible.add(s);
+        sortants=s.getTrans_sortantes();
+        trans=transitions;
+        Transition t=trans.get(cpt);
+        boolean stop= false;
+        while(!stop)
+        {
+            sortants=s.getTrans_sortantes();
+            for (Transition tr : sortants)
+            {
+                accessible.add(tr.getDest());
+            }
+            System.out.println(accessible);
+            System.out.println(tete);
+            tete++;
+            if (tete < accessible.size()) {
+                s = accessible.get(tete);
+            }
+            else{
+                stop= true;
+            }
+        }
+        //la procédure de coacessible
+        stop=false;
+        tete=0;
+        for (Sommet f: finaux)
+        {
+            coaccessible.add(f);
+            s=f;
+            while(!stop)
+            {
+                entrants=s.getTrans_entrantes();
+                for (Transition tr : entrants)
+                {
+                    coaccessible.add(tr.getSrc());
+                }
+                tete++;
+                if (tete < coaccessible.size()) {
+                    s = coaccessible.get(tete);
+                }
+                else{
+                    stop= true;
+                }
+            }
 
+        }
+
+        ArrayList<Transition> at= new ArrayList<Transition>();
+        ArrayList<Sommet> as= new ArrayList<Sommet>();
+        for(Sommet ss: AReduit.getEtats()) {
+            if (accessible.contains(ss) && coaccessible.contains(ss))
+            {
+                as.add(ss);
+            }
+
+        }
+        for(Transition tt : AReduit.getTransitions())
+        {
+            if((as.contains(tt.getDest()))&& (as.contains(tt.getSrc())))
+            {
+                at.add(tt);
+            }
+        }
+
+        AReduit.setTransitions(at);
+        AReduit.setEtats(as);
+
+
+        //eliminer les etats non accessibles et non coacessibles
+  /*      ArrayList<Transition> at= AReduit.getTransitions();
+        for(Sommet ss: AReduit.getEtats())
+        {
+            if (!accessible.contains(ss) || !coaccessible.contains(ss))
+            {
+                System.out.println("before for");
+                for(Transition tt : at)
+                {
+                    System.out.println("after ofr");
+                    if((tt.getDest()==ss)|| (tt.getSrc()==ss))
+                    {
+
+                        AReduit.transitions.remove(tt);
+                    }
+                }
+                AReduit.etats.remove(ss);
+            }
+        }*/
+        return AReduit;
+
+
+    }
+
+    public AutomateSimple Complet()
+    {
+        AutomateSimple AComplet = new AutomateSimple(this.S0);
+        AComplet.setAlphabet(alphabet);
+        AComplet.setEtats(etats);
+        AComplet.setFinaux(finaux);
+        AComplet.setTransitions(transitions);
+        boolean trouv=false;
+        Sommet puits= new Sommet("puits", EEtat.SIMPLE);
+        for (Sommet s: AComplet.getEtats()) {
+            for (String a : AComplet.getAlphabet()) {
+                trouv= false;
+                for (Transition t : s.getTrans_sortantes()) {
+                    if (t.getTrans().equals(a)) {
+                        trouv = true;
+                    }
+                }
+
+                if (!trouv) {
+                    Transition ajout = new Transition(s, puits, a, false);
+                    AComplet.transitions.add(ajout);
+                }
+
+            }
+
+        }
+
+        Transition tpuit;
+        for (String a : AComplet.alphabet)
+        {
+            tpuit= new Transition(puits, puits, a, true);
+            AComplet.transitions.add(tpuit);
+
+        }
+        AComplet.etats.add(puits);
+
+        return AComplet;
+    }
+
+    public AutomateSimple Complement()
+    {
+        AutomateSimple AComplement= new AutomateSimple(this.S0);
+        AComplement.setAlphabet(alphabet);
+        AComplement.setEtats(etats);
+        ArrayList<Sommet> efinaux = new ArrayList<Sommet>();
+        AComplement.setFinaux(efinaux);
+        AComplement.setTransitions(transitions);
+        AComplement= AComplement.Complet();
+        for ( Sommet e : AComplement.etats)
+        {
+            if (e.getEtat()==EEtat.FINAL)
+            {
+                e.setEtat(EEtat.SIMPLE);
+            }
+            else{
+                if (e.getEtat()==EEtat.SIMPLE)
+                {
+                    e.setEtat(EEtat.FINAL);
+                    AComplement.finaux.add(e);
+
+                }
+            }
+        }
+        return AComplement;
+    }
 
      public AutomateDeterministe deterministe(){
         AutomateDeterministe deterministe=new AutomateDeterministe();
@@ -282,7 +465,6 @@ public class AutomateSimple {
                     }
                 }else { //Sommet simple
                     for (Transition tr:si.getTrans_sortantes()) {if (!strings.contains(tr.getTrans())) strings.add(tr.getTrans());}
-                    System.out.println(strings.toString());
                     for (String letter : this.getAlphabet()){
                         System.out.println("je suis a la lettre "+letter+"\n");
                         if (strings.contains(letter)){
@@ -311,9 +493,10 @@ public class AutomateSimple {
                                     }
                                     if (!stop) sommetCompos.setEtat(EEtat.SIMPLE);
                                     sommets.add(sommetCompos);
+                                    deterministe.getEtats().addAll(sommets);
                                     Transition transition=new Transition(si,sommetCompos,letter,false);
                                     transitions.add(transition);
-                                    deterministe.setTransitions(transitions);
+                                    deterministe.getTransitions().addAll(transitions);
 
                                 }}else{
                                 if (nb_occ!=0) {
